@@ -1,0 +1,50 @@
+{
+  "config": {
+    "eventName": "SPACETIDEスケジュール表",
+    "startDate": "2026-07-06",
+    "dayCount": 5,
+    "dayWidth": 160,
+    "startHour": 9,
+    "endHour": 20,
+    "interval": 30
+  },
+  "subEvents": {
+    "2026-07-06": "",
+    "2026-07-07": "",
+    "2026-07-08": "",
+    "2026-07-09": "",
+    "2026-07-10": ""
+  },
+  "assignments": [
+    {
+      "id": "a-mr4b999n-cqubks",
+      "date": "2026-07-06",
+      "x": 7.6672821044921875,
+      "width": 70.531494140625,
+      "staffName": "山口",
+      "memo": "JAXAイベント",
+      "start": 1020,
+      "end": 1200
+    },
+    {
+      "id": "a-mr4b9hf0-fyba85",
+      "date": "2026-07-06",
+      "x": 0.1181182861328125,
+      "width": 82.5,
+      "staffName": "細貝",
+      "memo": "",
+      "start": 600,
+      "end": 810
+    },
+    {
+      "id": "a-mr4b9v43-dbgh3s",
+      "date": "2026-07-06",
+      "x": 11.6240234375,
+      "width": 81.24015808105469,
+      "staffName": "森田",
+      "memo": "",
+      "start": 810,
+      "end": 960
+    }
+  ]
+}

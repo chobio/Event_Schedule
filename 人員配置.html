@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>簡易人員スケジュール表</title>
+  <style>
+    :root {
+      --row-height: 40px;
+      --time-width: 76px;
+      --day-width: 300px;
+      --line: #dbe3ef;
+      --line-soft: #edf2f7;
+      --text: #172033;
+      --muted: #667085;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --red: #dc2626;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      padding: 14px 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    main {
+      padding: 16px;
+    }
+
+    .toolbar {
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    }
+
+    .toolbar-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 8px;
+    }
+
+    .toolbar-tab {
+      min-height: 32px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #344054;
+      padding: 6px 12px;
+    }
+
+    .toolbar-tab.active {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .toolbar-panel {
+      display: none;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .toolbar-panel.active {
+      display: flex;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select {
+      min-height: 36px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      background: #fff;
+      padding: 7px 9px;
+      color: var(--text);
+    }
+
+    input[type="number"] {
+      width: 78px;
+    }
+
+    button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--blue);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      padding: 8px 12px;
+    }
+
+    button:hover {
+      background: var(--blue-dark);
+    }
+
+    button.secondary {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #344054;
+    }
+
+    button.secondary:hover {
+      background: #f8fafc;
+    }
+
+    button.danger {
+      background: var(--red);
+    }
+
+    .hint {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .schedule-shell {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    }
+
+    .schedule {
+      display: grid;
+      grid-template-columns: var(--time-width) 1fr;
+      grid-template-rows: 48px 1fr;
+      min-width: calc(var(--time-width) + var(--day-width) * var(--day-count));
+    }
+
+    .corner {
+      position: sticky;
+      left: 0;
+      top: 0;
+      z-index: 12;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .date-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(var(--day-count), minmax(var(--day-width), 1fr));
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .date-cell {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .day-width-handle {
+      position: absolute;
+      top: 0;
+      right: -4px;
+      bottom: 0;
+      z-index: 2;
+      width: 8px;
+      cursor: col-resize;
+    }
+
+    .day-width-handle::after {
+      content: "";
+      position: absolute;
+      top: 10px;
+      bottom: 10px;
+      left: 3px;
+      width: 2px;
+      border-radius: 999px;
+      background: #94a3b8;
+      opacity: 0.75;
+    }
+
+    .day-width-handle:hover::after {
+      background: var(--blue);
+      opacity: 1;
+    }
+
+    .date-label {
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .sub-event-input {
+      margin-top: 4px;
+      width: calc(100% - 18px);
+      min-height: 24px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      background: #fff;
+      padding: 3px 6px;
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .sub-event-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .time-axis {
+      position: sticky;
+      left: 0;
+      z-index: 8;
+      background: #f8fafc;
+      border-right: 1px solid var(--line);
+    }
+
+    .time-label {
+      height: var(--row-height);
+      border-bottom: 1px solid var(--line-soft);
+      padding: 6px 8px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .day-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--day-count), minmax(var(--day-width), 1fr));
+    }
+
+    .day-column {
+      position: relative;
+      min-width: var(--day-width);
+      border-right: 1px solid var(--line);
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          #ffffff 0,
+          #ffffff calc(var(--row-height) - 1px),
+          var(--line-soft) calc(var(--row-height) - 1px),
+          var(--line-soft) var(--row-height)
+        );
+      user-select: none;
+    }
+
+    .day-column:hover {
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          #fbfdff 0,
+          #fbfdff calc(var(--row-height) - 1px),
+          var(--line-soft) calc(var(--row-height) - 1px),
+          var(--line-soft) var(--row-height)
+        );
+    }
+
+    .assignment {
+      position: absolute;
+      min-height: 28px;
+      border: 1px solid #1d4ed8;
+      border-radius: 4px;
+      background: #dbeafe;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
+      cursor: grab;
+      padding: 9px 10px 5px;
+      touch-action: none;
+    }
+
+    .assignment.dragging {
+      opacity: 0.78;
+      cursor: grabbing;
+      z-index: 15;
+    }
+
+    .assignment input {
+      width: 100%;
+      min-height: 20px;
+      border: 0;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.82);
+      padding: 2px 4px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .assignment .memo-input {
+      margin-top: 2px;
+      min-height: 18px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .assignment input:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.28);
+    }
+
+    .assignment .time {
+      margin-top: 2px;
+      color: #1e40af;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .resize-handle {
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(29, 78, 216, 0.22);
+    }
+
+    .resize-handle.top {
+      top: 2px;
+      left: 10px;
+      right: 10px;
+      height: 3px;
+      cursor: ns-resize;
+    }
+
+    .resize-handle.bottom {
+      bottom: 2px;
+      left: 10px;
+      right: 10px;
+      height: 3px;
+      cursor: ns-resize;
+    }
+
+    .resize-handle.left {
+      left: 2px;
+      top: 13px;
+      bottom: 5px;
+      width: 3px;
+      cursor: ew-resize;
+    }
+
+    .resize-handle.right {
+      right: 2px;
+      top: 13px;
+      bottom: 5px;
+      width: 3px;
+      cursor: ew-resize;
+    }
+
+    .delete-button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      min-height: auto;
+      border-radius: 999px;
+      background: transparent;
+      color: #1e40af;
+      font-size: 10px;
+      line-height: 1;
+      padding: 2px 4px;
+    }
+
+    .delete-button:hover {
+      background: rgba(29, 78, 216, 0.12);
+      color: #0f172a;
+    }
+
+    .message {
+      display: none;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    @media (max-width: 720px) {
+      main {
+        padding: 10px;
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 70px;
+        z-index: 15;
+        padding: 10px;
+      }
+
+      .toolbar-tabs {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--panel);
+      }
+
+      .toolbar-tab {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .toolbar-panel {
+        align-items: stretch;
+      }
+
+      label {
+        width: 100%;
+      }
+
+      button {
+        flex: 1;
+      }
+
+      :root {
+        --day-width: 240px;
+      }
+    }
+
+    @media print {
+      header,
+      .toolbar,
+      .hint,
+      .delete-button,
+      .message {
+        display: none !important;
+      }
+
+      main {
+        padding: 0;
+      }
+
+      .schedule-shell {
+        border: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="pageTitle">簡易人員スケジュール表</h1>
+    <p class="subtitle">HTML単体で動く簡易版。担当者名だけを入力し、ドラッグで時間帯を変更できます。</p>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="toolbar-tabs" role="tablist" aria-label="設定メニュー">
+        <button class="toolbar-tab active" type="button" data-tab="settings">設定</button>
+        <button class="toolbar-tab" type="button" data-tab="actions">操作</button>
+      </div>
+      <div class="toolbar-panel active" data-panel="settings">
+        <label>
+          イベント名
+          <input id="eventName" type="text" placeholder="例：展示会">
+        </label>
+        <label>
+          開始日
+          <input id="startDate" type="date">
+        </label>
+        <label>
+          日数
+          <input id="dayCount" type="number" min="1" max="14" value="7">
+        </label>
+        <label>
+          開始時
+          <input id="startHour" type="number" min="0" max="23" value="9">
+        </label>
+        <label>
+          終了時
+          <input id="endHour" type="number" min="1" max="24" value="18">
+        </label>
+        <label>
+          間隔
+          <select id="interval">
+            <option value="15">15分</option>
+            <option value="30" selected>30分</option>
+            <option value="60">60分</option>
+          </select>
+        </label>
+      </div>
+      <div class="toolbar-panel" data-panel="actions">
+        <button id="saveButton">保存</button>
+        <button id="saveAsButton" class="secondary">名前を付けて保存</button>
+        <button id="importButton" class="secondary">インポート</button>
+      </div>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
+    </div>
+
+    <p class="hint">
+      空白部分をダブルクリックすると、その日・その時刻に担当者枠を追加できます。
+      日付見出し右端の縦バーをドラッグすると、各日付列の横幅を変更できます。
+      枠の中には担当者名だけ入力できます。枠全体をドラッグすると日付枠内を上下左右に移動、上下の細いバーで時間帯を伸縮、左右の細いバーで幅を変更できます。
+      同じフォルダに <strong>data.json</strong> がある場合、起動時に自動読込を試みます。
+    </p>
+
+    <div id="message" class="message"></div>
+    <div id="scheduleShell" class="schedule-shell"></div>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const STORAGE_KEY = "simple-staff-scheduler-v1";
+      const DATA_FILE = "data.json";
+      const rowHeight = 40;
+
+      const el = {
+        pageTitle: document.getElementById("pageTitle"),
+        eventName: document.getElementById("eventName"),
+        startDate: document.getElementById("startDate"),
+        dayCount: document.getElementById("dayCount"),
+        startHour: document.getElementById("startHour"),
+        endHour: document.getElementById("endHour"),
+        interval: document.getElementById("interval"),
+        saveButton: document.getElementById("saveButton"),
+        saveAsButton: document.getElementById("saveAsButton"),
+        importButton: document.getElementById("importButton"),
+        importFile: document.getElementById("importFile"),
+        scheduleShell: document.getElementById("scheduleShell"),
+        message: document.getElementById("message")
+      };
+
+      let state = loadState();
+      let drag = null;
+      let isFileDirty = false;
+      let currentFileHandle = null;
+      let currentFileName = DATA_FILE;
+
+      function today() {
+        const d = new Date();
+        return formatDate(d);
+      }
+
+      function formatDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function addDays(dateText, add) {
+        const d = new Date(dateText + "T00:00:00");
+        d.setDate(d.getDate() + add);
+        return formatDate(d);
+      }
+
+      function formatDateShort(dateText) {
+        const d = new Date(dateText + "T00:00:00");
+        const weeks = ["日", "月", "火", "水", "木", "金", "土"];
+        if (Number.isNaN(d.getTime())) return dateText;
+        return `${d.getMonth() + 1}/${d.getDate()}(${weeks[d.getDay()]})`;
+      }
+
+      function minutesToTime(minutes) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      }
+
+      function normalizeState(value) {
+        const config = value && value.config ? value.config : {};
+        const next = {
+          config: {
+            eventName: String(config.eventName || "簡易人員スケジュール表"),
+            startDate: config.startDate || today(),
+            dayCount: clampInt(config.dayCount, 1, 14, 7),
+            dayWidth: clampInt(
+              config.dayWidth,
+              160,
+              900,
+              clampInt(config.peoplePerDay, 1, 12, 1) * 150
+            ),
+            startHour: clampInt(config.startHour, 0, 23, 9),
+            endHour: clampInt(config.endHour, 1, 24, 18),
+            interval: [15, 30, 60].includes(Number(config.interval)) ? Number(config.interval) : 30
+          },
+          subEvents: {},
+          assignments: Array.isArray(value && value.assignments) ? value.assignments : []
+        };
+        if (next.config.endHour <= next.config.startHour) {
+          next.config.endHour = Math.min(24, next.config.startHour + 1);
+        }
+        const days = getDaysFromConfig(next.config);
+        const rawSubEvents =
+          value && typeof value.subEvents === "object" && value.subEvents !== null
+            ? value.subEvents
+            : {};
+        for (const date of days) {
+          next.subEvents[date] = String(rawSubEvents[date] || "");
+        }
+        next.assignments = next.assignments
+          .filter((a) => a && typeof a.date === "string")
+          .map((a) => {
+            const legacyPeople = clampInt(config.peoplePerDay, 1, 12, 1);
+            const legacyLane = clampInt(a.lane, 0, legacyPeople - 1, 0);
+            const legacyWidth = Math.max(80, Math.floor(next.config.dayWidth / legacyPeople) - 12);
+            const legacyX = Math.min(
+              next.config.dayWidth - legacyWidth,
+              Math.max(0, legacyLane * Math.floor(next.config.dayWidth / legacyPeople) + 6)
+            );
+            return {
+              id: String(a.id || makeId()),
+              date: a.date,
+              staffName: String(a.staffName || ""),
+              memo: String(a.memo || ""),
+              x: Number.isFinite(Number(a.x)) ? Number(a.x) : legacyX,
+              width: Number.isFinite(Number(a.width)) ? Number(a.width) : legacyWidth,
+              start: Number(a.start),
+              end: Number(a.end)
+            };
+          })
+          .filter((a) => Number.isFinite(a.start) && Number.isFinite(a.end) && a.end > a.start)
+          .map((a) => clampAssignment(a, next.config));
+        return next;
+      }
+
+      function clampInt(value, min, max, fallback) {
+        const n = parseInt(value, 10);
+        if (Number.isNaN(n)) return fallback;
+        return Math.min(max, Math.max(min, n));
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) return normalizeState(JSON.parse(raw));
+        } catch (error) {
+          console.warn(error);
+        }
+        return normalizeState({
+          config: {
+            eventName: "簡易人員スケジュール表",
+            startDate: today(),
+            dayCount: 7,
+            dayWidth: 300,
+            startHour: 9,
+            endHour: 18,
+            interval: 30
+          },
+          subEvents: {},
+          assignments: []
+        });
+      }
+
+      function saveState(markDirty) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (markDirty !== false) {
+          isFileDirty = true;
+        }
+      }
+
+      function makeId() {
+        return "a-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+      }
+
+      function getDays() {
+        return getDaysFromConfig(state.config);
+      }
+
+      function getDaysFromConfig(config) {
+        return Array.from({ length: config.dayCount }, (_, i) => addDays(config.startDate, i));
+      }
+
+      function getStartMinutes() {
+        return state.config.startHour * 60;
+      }
+
+      function getEndMinutes() {
+        return state.config.endHour * 60;
+      }
+
+      function getSlotCount() {
+        return Math.ceil((getEndMinutes() - getStartMinutes()) / state.config.interval);
+      }
+
+      function getDayWidth() {
+        return state.config.dayWidth;
+      }
+
+      function snapMinutes(minutes) {
+        const interval = state.config.interval;
+        return Math.round(minutes / interval) * interval;
+      }
+
+      function clampAssignment(assignment, config) {
+        const targetConfig = config || state.config;
+        const start = targetConfig.startHour * 60;
+        const end = targetConfig.endHour * 60;
+        const interval = targetConfig.interval;
+        let nextStart = Math.round(assignment.start / interval) * interval;
+        let nextEnd = Math.round(assignment.end / interval) * interval;
+        nextStart = Math.max(start, Math.min(end - interval, nextStart));
+        nextEnd = Math.max(nextStart + interval, Math.min(end, nextEnd));
+        const days = getDaysFromConfig(targetConfig);
+        const date = days.includes(assignment.date) ? assignment.date : days[0];
+        const minWidth = 60;
+        const dayWidth = targetConfig.dayWidth;
+        const rawWidth = Number.isFinite(Number(assignment.width))
+          ? Number(assignment.width)
+          : 140;
+        const width = Math.max(minWidth, Math.min(dayWidth, rawWidth));
+        const rawX = Number.isFinite(Number(assignment.x)) ? Number(assignment.x) : 6;
+        const x = Math.max(0, Math.min(dayWidth - width, rawX));
+        return { ...assignment, date, x, width, start: nextStart, end: nextEnd };
+      }
+
+      function showMessage(text, type) {
+        el.message.textContent = text;
+        el.message.className = "message show " + (type || "ok");
+        window.setTimeout(() => {
+          el.message.className = "message";
+          el.message.textContent = "";
+        }, 3000);
+      }
+
+      function syncControls() {
+        el.eventName.value = state.config.eventName;
+        el.startDate.value = state.config.startDate;
+        el.dayCount.value = state.config.dayCount;
+        el.startHour.value = state.config.startHour;
+        el.endHour.value = state.config.endHour;
+        el.interval.value = state.config.interval;
+        el.pageTitle.textContent = state.config.eventName || "簡易人員スケジュール表";
+        document.title = `${state.config.eventName || "簡易人員スケジュール表"} - 簡易人員スケジュール表`;
+      }
+
+      function applyControlChanges() {
+        const beforeInterval = state.config.interval;
+        state.config = {
+          eventName: el.eventName.value.trim() || "簡易人員スケジュール表",
+          startDate: el.startDate.value || today(),
+          dayCount: clampInt(el.dayCount.value, 1, 14, 7),
+          dayWidth: state.config.dayWidth,
+          startHour: clampInt(el.startHour.value, 0, 23, 9),
+          endHour: clampInt(el.endHour.value, 1, 24, 18),
+          interval: Number(el.interval.value)
+        };
+        if (state.config.endHour <= state.config.startHour) {
+          state.config.endHour = Math.min(24, state.config.startHour + 1);
+        }
+        syncSubEvents();
+        if (state.config.interval !== beforeInterval) {
+          state.assignments = state.assignments.map((a) => clampAssignment(a));
+        } else {
+          state.assignments = state.assignments.map((a) => clampAssignment(a));
+        }
+        saveState();
+        render();
+      }
+
+      function addAssignment(date, start, name, x) {
+        const interval = state.config.interval;
+        const width = Math.min(140, getDayWidth());
+        const defaultEnd = Math.min(getEndMinutes(), start + interval * 2);
+        state.assignments.push({
+          id: makeId(),
+          date,
+          x: Math.max(0, Math.min(getDayWidth() - width, Number(x) || 0)),
+          width,
+          staffName: name || "",
+          memo: "",
+          start,
+          end: defaultEnd
+        });
+        saveState();
+        render();
+      }
+
+      function syncSubEvents() {
+        const next = {};
+        for (const date of getDays()) {
+          next[date] = state.subEvents && state.subEvents[date] ? state.subEvents[date] : "";
+        }
+        state.subEvents = next;
+      }
+
+      function updateSubEvent(date, value) {
+        state.subEvents = { ...(state.subEvents || {}), [date]: value };
+        saveState();
+      }
+
+      function deleteAssignment(id) {
+        state.assignments = state.assignments.filter((a) => a.id !== id);
+        saveState();
+        render();
+      }
+
+      function updateAssignment(id, patch) {
+        state.assignments = state.assignments.map((a) => {
+          if (a.id !== id) return a;
+          return clampAssignment({ ...a, ...patch });
+        });
+        saveState();
+        render();
+      }
+
+      function render() {
+        syncControls();
+        syncSubEvents();
+        const days = getDays();
+        const slotCount = getSlotCount();
+        const dayWidth = getDayWidth();
+        const totalHeight = slotCount * rowHeight;
+        document.documentElement.style.setProperty("--day-count", String(days.length));
+        document.documentElement.style.setProperty("--day-width", `${dayWidth}px`);
+
+        const timeLabels = [];
+        for (let i = 0; i < slotCount; i += 1) {
+          const minutes = getStartMinutes() + i * state.config.interval;
+          timeLabels.push(`<div class="time-label">${minutesToTime(minutes)}</div>`);
+        }
+
+        const header = days.map((date) => {
+          const subEvent = state.subEvents && state.subEvents[date] ? state.subEvents[date] : "";
+          return `<div class="date-cell" data-date="${date}"><div class="date-label">${formatDateShort(date)}</div><input class="sub-event-input" type="text" value="${escapeHtml(subEvent)}" placeholder="サブイベント"><div class="day-width-handle" title="日付幅を変更"></div></div>`;
+        }).join("");
+        const columns = days.map((date) => `<div class="day-column" data-date="${date}" style="height:${totalHeight}px"></div>`).join("");
+
+        el.scheduleShell.innerHTML = `
+          <div class="schedule">
+            <div class="corner"></div>
+            <div class="date-header">${header}</div>
+            <div class="time-axis">${timeLabels.join("")}</div>
+            <div class="day-grid">${columns}</div>
+          </div>
+        `;
+
+        for (const column of el.scheduleShell.querySelectorAll(".day-column")) {
+          column.addEventListener("dblclick", handleColumnDoubleClick);
+        }
+
+        for (const handle of el.scheduleShell.querySelectorAll(".day-width-handle")) {
+          handle.addEventListener("pointerdown", handleDayWidthPointerDown);
+        }
+
+        for (const input of el.scheduleShell.querySelectorAll(".sub-event-input")) {
+          input.addEventListener("input", (event) => {
+            const date = event.currentTarget.closest(".date-cell").dataset.date;
+            updateSubEvent(date, event.target.value);
+          });
+          input.addEventListener("pointerdown", (event) => event.stopPropagation());
+        }
+
+        for (const assignment of state.assignments) {
+          const column = el.scheduleShell.querySelector(`.day-column[data-date="${assignment.date}"]`);
+          if (!column) continue;
+          const node = document.createElement("div");
+          node.className = "assignment";
+          node.dataset.id = assignment.id;
+          node.style.left = `${assignment.x}px`;
+          node.style.width = `${assignment.width}px`;
+          node.style.top = `${((assignment.start - getStartMinutes()) / state.config.interval) * rowHeight + 2}px`;
+          node.style.height = `${((assignment.end - assignment.start) / state.config.interval) * rowHeight - 4}px`;
+          node.innerHTML = `
+            <div class="resize-handle top" data-action="resize-start"></div>
+            <div class="resize-handle left" data-action="resize-left"></div>
+            <button class="delete-button" title="削除" aria-label="削除">x</button>
+            <input class="name-input" type="text" value="${escapeHtml(assignment.staffName)}" placeholder="担当者名">
+            <input class="memo-input" type="text" value="${escapeHtml(assignment.memo || "")}" placeholder="メモ">
+            <div class="time">${minutesToTime(assignment.start)}-${minutesToTime(assignment.end)}</div>
+            <div class="resize-handle right" data-action="resize-right"></div>
+            <div class="resize-handle bottom" data-action="resize-end"></div>
+          `;
+          node.addEventListener("pointerdown", handleAssignmentPointerDown);
+          node.querySelector(".name-input").addEventListener("input", (event) => {
+            state.assignments = state.assignments.map((a) => (
+              a.id === assignment.id ? { ...a, staffName: event.target.value } : a
+            ));
+            saveState();
+          });
+          node.querySelector(".memo-input").addEventListener("input", (event) => {
+            state.assignments = state.assignments.map((a) => (
+              a.id === assignment.id ? { ...a, memo: event.target.value } : a
+            ));
+            saveState();
+          });
+          node.querySelector(".delete-button").addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteAssignment(assignment.id);
+          });
+          column.appendChild(node);
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function handleColumnDoubleClick(event) {
+        if (!event.currentTarget.classList.contains("day-column")) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const slot = Math.floor((event.clientY - rect.top) / rowHeight);
+        const defaultWidth = Math.min(140, getDayWidth());
+        const x = Math.max(0, Math.min(getDayWidth() - defaultWidth, event.clientX - rect.left - defaultWidth / 2));
+        const start = getStartMinutes() + slot * state.config.interval;
+        const name = window.prompt("担当者名を入力してください", "");
+        if (name === null) return;
+        addAssignment(event.currentTarget.dataset.date, start, name.trim(), x);
+      }
+
+      function handleAssignmentPointerDown(event) {
+        if (event.button !== 0) return;
+        if (event.target.tagName === "INPUT" || event.target.tagName === "BUTTON") return;
+
+        const node = event.currentTarget;
+        const id = node.dataset.id;
+        const assignment = state.assignments.find((a) => a.id === id);
+        if (!assignment) return;
+
+        const handle = event.target.closest(".resize-handle");
+        const action = handle ? handle.dataset.action : "move";
+
+        drag = {
+          id,
+          action,
+          originX: event.clientX,
+          originY: event.clientY,
+          start: assignment.start,
+          end: assignment.end,
+          date: assignment.date,
+          x: assignment.x,
+          width: assignment.width
+        };
+
+        node.classList.add("dragging");
+        node.setPointerCapture(event.pointerId);
+        document.addEventListener("pointermove", handlePointerMove);
+        document.addEventListener("pointerup", handlePointerUp, { once: true });
+        event.preventDefault();
+      }
+
+      function handleDayWidthPointerDown(event) {
+        drag = {
+          action: "resize-day-width",
+          originX: event.clientX,
+          dayWidth: state.config.dayWidth,
+          assignments: state.assignments.map((a) => ({ ...a }))
+        };
+        document.addEventListener("pointermove", handlePointerMove);
+        document.addEventListener("pointerup", handlePointerUp, { once: true });
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      function handlePointerMove(event) {
+        if (!drag) return;
+        const xDelta = event.clientX - drag.originX;
+
+        if (drag.action === "resize-day-width") {
+          const nextWidth = Math.max(160, Math.min(900, drag.dayWidth + xDelta));
+          const ratio = nextWidth / drag.dayWidth;
+          state.config = { ...state.config, dayWidth: Math.round(nextWidth) };
+          state.assignments = drag.assignments.map((a) =>
+            clampAssignment(
+              {
+                ...a,
+                x: a.x * ratio,
+                width: a.width * ratio
+              },
+              state.config
+            )
+          );
+          render();
+          return;
+        }
+
+        const interval = state.config.interval;
+        const slotDelta = Math.round((event.clientY - drag.originY) / rowHeight);
+        const minuteDelta = slotDelta * interval;
+        const assignment = state.assignments.find((a) => a.id === drag.id);
+        if (!assignment) return;
+
+        let patch = {};
+
+        if (drag.action === "resize-start") {
+          patch = { start: Math.min(drag.end - interval, drag.start + minuteDelta) };
+        } else if (drag.action === "resize-end") {
+          patch = { end: Math.max(drag.start + interval, drag.end + minuteDelta) };
+        } else if (drag.action === "resize-left") {
+          const minWidth = 60;
+          const maxLeft = drag.x + drag.width - minWidth;
+          const nextX = Math.max(0, Math.min(maxLeft, drag.x + xDelta));
+          patch = { x: nextX, width: drag.width + (drag.x - nextX) };
+        } else if (drag.action === "resize-right") {
+          const minWidth = 60;
+          const nextWidth = Math.max(
+            minWidth,
+            Math.min(getDayWidth() - drag.x, drag.width + xDelta)
+          );
+          patch = { width: nextWidth };
+        } else {
+          const duration = drag.end - drag.start;
+          const minStart = getStartMinutes();
+          const maxStart = getEndMinutes() - duration;
+          const nextStart = Math.max(minStart, Math.min(maxStart, drag.start + minuteDelta));
+          const nextX = Math.max(0, Math.min(getDayWidth() - drag.width, drag.x + xDelta));
+          patch = { x: nextX, start: nextStart, end: nextStart + duration };
+        }
+
+        state.assignments = state.assignments.map((a) => (
+          a.id === drag.id ? clampAssignment({ ...a, ...patch }) : a
+        ));
+        render();
+      }
+
+      function handlePointerUp() {
+        if (!drag) return;
+        drag = null;
+        saveState();
+        document.removeEventListener("pointermove", handlePointerMove);
+        render();
+      }
+
+      function downloadJson(filename) {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      async function writeToFileHandle(handle) {
+        const writable = await handle.createWritable();
+        await writable.write(JSON.stringify(state, null, 2));
+        await writable.close();
+      }
+
+      async function saveJson(filename, forcePicker) {
+        try {
+          if ("showSaveFilePicker" in window) {
+            if (!currentFileHandle || forcePicker) {
+              currentFileHandle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [
+                  {
+                    description: "JSONファイル",
+                    accept: { "application/json": [".json"] }
+                  }
+                ]
+              });
+              currentFileName = currentFileHandle.name || filename;
+            }
+            await writeToFileHandle(currentFileHandle);
+          } else {
+            downloadJson(filename);
+            currentFileName = filename;
+          }
+          isFileDirty = false;
+          showMessage(`${currentFileName || filename} に保存しました。`, "ok");
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          console.error(error);
+          downloadJson(filename);
+          isFileDirty = false;
+          currentFileName = filename;
+          showMessage(`${filename} をダウンロードしました。`, "ok");
+        }
+      }
+
+      function defaultSaveName() {
+        return DATA_FILE;
+      }
+
+      function saveAsJson() {
+        const suggested = `${safeFileName(state.config.eventName)}-${state.config.startDate}.json`;
+        const filename = window.prompt("保存するファイル名を入力してください", suggested);
+        if (filename === null) return;
+        const trimmed = filename.trim();
+        if (!trimmed) return;
+        const normalized = trimmed.toLowerCase().endsWith(".json") ? trimmed : `${trimmed}.json`;
+        saveJson(normalized, true);
+      }
+
+      async function tryAutoImportFromSameFolder() {
+        const candidates = [DATA_FILE];
+
+        for (const filename of candidates) {
+          try {
+            const response = await fetch(filename, { cache: "no-store" });
+            if (!response.ok) continue;
+
+            const imported = normalizeState(await response.json());
+            state = imported;
+            saveState(false);
+            isFileDirty = false;
+            currentFileHandle = null;
+            currentFileName = DATA_FILE;
+            render();
+            showMessage(`同じフォルダの ${filename} を読み込みました。`, "ok");
+            return;
+          } catch (error) {
+            // file:// 直開きではブラウザ制限で失敗することがあるため、静かに次候補へ進む。
+            console.debug("Auto import skipped:", filename, error);
+          }
+        }
+      }
+
+      function safeFileName(value) {
+        const name = String(value || "schedule")
+          .trim()
+          .replace(/[\\/:*?"<>|]/g, "_")
+          .replace(/\s+/g, "_");
+        return name || "schedule";
+      }
+
+      function importJson(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const imported = normalizeState(JSON.parse(String(reader.result)));
+            state = imported;
+            saveState(false);
+            isFileDirty = false;
+            currentFileHandle = null;
+            currentFileName = file.name || DATA_FILE;
+            render();
+            showMessage("JSONをインポートしました。", "ok");
+          } catch (error) {
+            console.error(error);
+            showMessage("JSONの読み込みに失敗しました。", "error");
+          }
+        };
+        reader.onerror = () => showMessage("ファイルの読み込みに失敗しました。", "error");
+        reader.readAsText(file);
+      }
+
+      function activateToolbarTab(tabName) {
+        for (const tab of document.querySelectorAll(".toolbar-tab")) {
+          tab.classList.toggle("active", tab.dataset.tab === tabName);
+        }
+        for (const panel of document.querySelectorAll(".toolbar-panel")) {
+          panel.classList.toggle("active", panel.dataset.panel === tabName);
+        }
+      }
+
+      el.eventName.addEventListener("change", applyControlChanges);
+      el.startDate.addEventListener("change", applyControlChanges);
+      el.dayCount.addEventListener("change", applyControlChanges);
+      el.startHour.addEventListener("change", applyControlChanges);
+      el.endHour.addEventListener("change", applyControlChanges);
+      el.interval.addEventListener("change", applyControlChanges);
+
+      for (const tab of document.querySelectorAll(".toolbar-tab")) {
+        tab.addEventListener("click", () => activateToolbarTab(tab.dataset.tab));
+      }
+
+      el.saveButton.addEventListener("click", () => saveJson(defaultSaveName()));
+      el.saveAsButton.addEventListener("click", saveAsJson);
+      el.importButton.addEventListener("click", () => el.importFile.click());
+      el.importFile.addEventListener("change", (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (file) importJson(file);
+        event.target.value = "";
+      });
+
+      window.addEventListener("beforeunload", (event) => {
+        if (!isFileDirty) return;
+        event.preventDefault();
+        event.returnValue = "保存していない変更があります。閉じる前に保存してください。";
+      });
+
+      syncControls();
+      render();
+      tryAutoImportFromSameFolder();
+    })();
+  </script>
+</body>
+</html>
