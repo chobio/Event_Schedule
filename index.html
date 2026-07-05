@@ -172,8 +172,9 @@
 
     .schedule {
       display: grid;
-      grid-template-columns: var(--time-width) 1fr;
+      grid-template-columns: var(--time-width) auto;
       grid-template-rows: 48px 1fr;
+      width: max-content;
       min-width: calc(var(--time-width) + var(--day-width) * var(--day-count));
     }
 
@@ -192,7 +193,7 @@
       top: 0;
       z-index: 10;
       display: grid;
-      grid-template-columns: repeat(var(--day-count), minmax(var(--day-width), 1fr));
+      grid-template-columns: repeat(var(--day-count), var(--day-width));
       border-bottom: 1px solid var(--line);
       background: #f8fafc;
     }
@@ -278,12 +279,12 @@
 
     .day-grid {
       display: grid;
-      grid-template-columns: repeat(var(--day-count), minmax(var(--day-width), 1fr));
+      grid-template-columns: repeat(var(--day-count), var(--day-width));
     }
 
     .day-column {
       position: relative;
-      min-width: var(--day-width);
+      width: var(--day-width);
       border-right: 1px solid var(--line);
       background:
         repeating-linear-gradient(
@@ -885,7 +886,8 @@
         `;
 
         for (const column of el.scheduleShell.querySelectorAll(".day-column")) {
-          column.addEventListener("dblclick", handleColumnDoubleClick);
+          column.addEventListener("dblclick", handleColumnCreate);
+          column.addEventListener("contextmenu", handleColumnCreate);
         }
 
         for (const handle of el.scheduleShell.querySelectorAll(".day-width-handle")) {
@@ -949,16 +951,16 @@
           .replaceAll('"', "&quot;");
       }
 
-      function handleColumnDoubleClick(event) {
+      function handleColumnCreate(event) {
         if (!event.currentTarget.classList.contains("day-column")) return;
+        if (event.target !== event.currentTarget) return;
+        event.preventDefault();
         const rect = event.currentTarget.getBoundingClientRect();
-        const slot = Math.floor((event.clientY - rect.top) / rowHeight);
+        const slot = Math.max(0, Math.min(getSlotCount() - 1, Math.floor((event.clientY - rect.top) / rowHeight)));
         const defaultWidth = Math.min(140, getDayWidth());
         const x = Math.max(0, Math.min(getDayWidth() - defaultWidth, event.clientX - rect.left - defaultWidth / 2));
         const start = getStartMinutes() + slot * state.config.interval;
-        const name = window.prompt("担当者名を入力してください", "");
-        if (name === null) return;
-        addAssignment(event.currentTarget.dataset.date, start, name.trim(), x);
+        addAssignment(event.currentTarget.dataset.date, start, "", x);
       }
 
       function handleAssignmentPointerDown(event) {
