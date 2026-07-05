@@ -1,3 +1,4 @@
+<!-- Version 1.2 -->
 <!doctype html>
 <html lang="ja">
 <head>
@@ -52,6 +53,17 @@
       font-size: 12px;
     }
 
+    .event-address-display {
+      margin: 6px 0 0;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .event-address-display:empty {
+      display: none;
+    }
+
     main {
       padding: 16px;
     }
@@ -96,6 +108,14 @@
 
     .toolbar-panel.active {
       display: flex;
+    }
+
+    .event-address-field {
+      flex: 1 1 100%;
+    }
+
+    .event-address-field input {
+      width: 100%;
     }
 
     label {
@@ -498,6 +518,7 @@
 <body>
   <header>
     <h1 id="pageTitle">簡易人員スケジュール表</h1>
+    <p id="eventAddressDisplay" class="event-address-display"></p>
     <p class="subtitle">HTML単体で動く簡易版。担当者名だけを入力し、ドラッグで時間帯を変更できます。</p>
   </header>
 
@@ -508,6 +529,10 @@
         <button class="toolbar-tab" type="button" data-tab="actions">操作</button>
       </div>
       <div class="toolbar-panel active" data-panel="settings">
+        <label class="event-address-field">
+          イベント会場住所
+          <input id="eventAddress" type="text" placeholder="例：東京都千代田区...">
+        </label>
         <label>
           イベント名
           <input id="eventName" type="text" placeholder="例：展示会">
@@ -566,7 +591,9 @@
 
       const el = {
         pageTitle: document.getElementById("pageTitle"),
+        eventAddressDisplay: document.getElementById("eventAddressDisplay"),
         eventName: document.getElementById("eventName"),
+        eventAddress: document.getElementById("eventAddress"),
         startDate: document.getElementById("startDate"),
         dayCount: document.getElementById("dayCount"),
         startHour: document.getElementById("startHour"),
@@ -622,6 +649,7 @@
         const next = {
           config: {
             eventName: String(config.eventName || "簡易人員スケジュール表"),
+            eventAddress: String(config.eventAddress || ""),
             startDate: config.startDate || today(),
             dayCount: clampInt(config.dayCount, 1, 14, 7),
             dayWidth: clampInt(
@@ -690,6 +718,7 @@
         return normalizeState({
           config: {
             eventName: "簡易人員スケジュール表",
+            eventAddress: "",
             startDate: today(),
             dayCount: 7,
             dayWidth: 300,
@@ -775,6 +804,8 @@
 
       function syncControls() {
         el.eventName.value = state.config.eventName;
+        el.eventAddress.value = state.config.eventAddress || "";
+        el.eventAddressDisplay.textContent = state.config.eventAddress || "";
         el.startDate.value = state.config.startDate;
         el.dayCount.value = state.config.dayCount;
         el.startHour.value = state.config.startHour;
@@ -788,6 +819,7 @@
         const beforeInterval = state.config.interval;
         state.config = {
           eventName: el.eventName.value.trim() || "簡易人員スケジュール表",
+          eventAddress: el.eventAddress.value.trim(),
           startDate: el.startDate.value || today(),
           dayCount: clampInt(el.dayCount.value, 1, 14, 7),
           dayWidth: state.config.dayWidth,
@@ -1203,6 +1235,7 @@
       }
 
       el.eventName.addEventListener("change", applyControlChanges);
+      el.eventAddress.addEventListener("change", applyControlChanges);
       el.startDate.addEventListener("change", applyControlChanges);
       el.dayCount.addEventListener("change", applyControlChanges);
       el.startHour.addEventListener("change", applyControlChanges);

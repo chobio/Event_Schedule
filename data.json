@@ -1,6 +1,7 @@
 {
   "config": {
     "eventName": "人員スケジュール表",
+    "eventAddress": "",
     "startDate": "2026-07-03",
     "dayCount": 7,
     "dayWidth": 211,
