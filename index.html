@@ -39,46 +39,139 @@
       border-bottom: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(8px);
-      padding: 14px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 14px;
+      padding: 6px 12px;
     }
 
     h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 16px;
+      line-height: 1.2;
     }
 
     .subtitle {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 12px;
+      display: none;
     }
 
     .event-address-display {
-      margin: 6px 0 0;
-      color: #344054;
-      font-size: 13px;
-      font-weight: 700;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .event-address-display:empty {
       display: none;
     }
 
+    .menu-area {
+      position: relative;
+      margin-left: auto;
+    }
+
+    .menu-button {
+      min-width: 44px;
+      min-height: 34px;
+      padding: 6px 12px;
+    }
+
+    .app-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 30;
+      display: none;
+      min-width: 190px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 30px rgba(16, 24, 40, 0.16);
+      padding: 6px;
+    }
+
+    .menu-open .app-menu {
+      display: grid;
+      gap: 4px;
+    }
+
+    .menu-item {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .menu-item:hover {
+      background: #eff6ff;
+      color: var(--blue-dark);
+    }
+
     main {
-      padding: 16px;
+      padding: 8px 10px 12px;
     }
 
     .toolbar {
-      margin-bottom: 14px;
+      position: fixed;
+      top: 64px;
+      left: 50%;
+      z-index: 40;
+      display: none;
+      width: min(720px, calc(100vw - 20px));
+      max-height: calc(100vh - 84px);
+      overflow: auto;
+      transform: translateX(-50%);
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 8px;
       background: var(--panel);
       padding: 12px;
-      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+      box-shadow: 0 16px 42px rgba(16, 24, 40, 0.22);
+    }
+
+    .settings-open .toolbar {
+      display: block;
+    }
+
+    .settings-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      display: none;
+      background: rgba(15, 23, 42, 0.32);
+    }
+
+    .settings-open .settings-backdrop {
+      display: block;
+    }
+
+    .toolbar-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 8px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .close-settings-button {
+      min-width: 44px;
+      min-height: 34px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #344054;
+      padding: 4px 10px;
     }
 
     .toolbar-tabs {
-      display: flex;
+      display: none;
       gap: 6px;
       margin-bottom: 10px;
       border-bottom: 1px solid var(--line-soft);
@@ -108,6 +201,10 @@
 
     .toolbar-panel.active {
       display: flex;
+    }
+
+    .toolbar-panel[data-panel="actions"] {
+      display: none;
     }
 
     .event-address-field {
@@ -176,6 +273,7 @@
     }
 
     .hint {
+      display: none;
       margin: 0 0 12px;
       color: var(--muted);
       font-size: 13px;
@@ -455,14 +553,45 @@
     }
 
     @media (max-width: 720px) {
+      header {
+        gap: 3px 8px;
+        padding: 5px 8px;
+      }
+
+      h1 {
+        max-width: calc(100vw - 92px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       main {
-        padding: 10px;
+        padding: 6px;
+      }
+
+      .menu-area {
+        margin-left: auto;
+      }
+
+      .app-menu {
+        position: fixed;
+        top: 46px;
+        right: 6px;
+        left: 6px;
+        min-width: 0;
+      }
+
+      .menu-item {
+        min-height: 48px;
+        text-align: center;
       }
 
       .toolbar {
-        position: sticky;
-        top: 70px;
-        z-index: 15;
+        position: fixed;
+        top: 48px;
+        z-index: 40;
+        width: calc(100vw - 12px);
+        max-height: calc(100vh - 60px);
         padding: 10px;
       }
 
@@ -509,6 +638,7 @@
       }
 
       .schedule-shell {
+        display: block !important;
         border: 0;
         box-shadow: none;
       }
@@ -520,10 +650,23 @@
     <h1 id="pageTitle">簡易人員スケジュール表</h1>
     <p id="eventAddressDisplay" class="event-address-display"></p>
     <p class="subtitle">HTML単体で動く簡易版。担当者名だけを入力し、ドラッグで時間帯を変更できます。</p>
+    <div class="menu-area">
+      <button id="menuButton" class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">Menu</button>
+      <div id="appMenu" class="app-menu">
+        <button id="eventSettingsButton" class="menu-item" type="button">イベント設定</button>
+        <button id="openButton" class="menu-item" type="button">Open</button>
+        <button id="menuSaveButton" class="menu-item" type="button">Save</button>
+        <button id="menuSaveAsButton" class="menu-item" type="button">Save as ...</button>
+      </div>
+    </div>
   </header>
 
   <main>
     <div class="toolbar">
+      <div class="toolbar-title">
+        <span>イベント設定</span>
+        <button id="closeSettingsButton" class="close-settings-button" type="button">閉じる</button>
+      </div>
       <div class="toolbar-tabs" role="tablist" aria-label="設定メニュー">
         <button class="toolbar-tab active" type="button" data-tab="settings">設定</button>
         <button class="toolbar-tab" type="button" data-tab="actions">操作</button>
@@ -579,6 +722,7 @@
 
     <div id="message" class="message"></div>
     <div id="scheduleShell" class="schedule-shell"></div>
+    <div id="settingsBackdrop" class="settings-backdrop"></div>
   </main>
 
   <script>
@@ -590,6 +734,13 @@
       const rowHeight = 40;
 
       const el = {
+        menuButton: document.getElementById("menuButton"),
+        eventSettingsButton: document.getElementById("eventSettingsButton"),
+        openButton: document.getElementById("openButton"),
+        menuSaveButton: document.getElementById("menuSaveButton"),
+        menuSaveAsButton: document.getElementById("menuSaveAsButton"),
+        closeSettingsButton: document.getElementById("closeSettingsButton"),
+        settingsBackdrop: document.getElementById("settingsBackdrop"),
         pageTitle: document.getElementById("pageTitle"),
         eventAddressDisplay: document.getElementById("eventAddressDisplay"),
         eventName: document.getElementById("eventName"),
@@ -1234,6 +1385,33 @@
         }
       }
 
+      function setMenuOpen(open) {
+        document.body.classList.toggle("menu-open", open);
+        el.menuButton.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+
+      function openSettings() {
+        document.body.classList.add("settings-open");
+        setMenuOpen(false);
+      }
+
+      function closeSettings() {
+        document.body.classList.remove("settings-open");
+      }
+
+      function runMenuAction(action) {
+        setMenuOpen(false);
+        if (action === "settings") {
+          openSettings();
+        } else if (action === "open") {
+          el.importFile.click();
+        } else if (action === "save") {
+          saveJson(defaultSaveName());
+        } else if (action === "save-as") {
+          saveAsJson();
+        }
+      }
+
       el.eventName.addEventListener("change", applyControlChanges);
       el.eventAddress.addEventListener("change", applyControlChanges);
       el.startDate.addEventListener("change", applyControlChanges);
@@ -1245,6 +1423,27 @@
       for (const tab of document.querySelectorAll(".toolbar-tab")) {
         tab.addEventListener("click", () => activateToolbarTab(tab.dataset.tab));
       }
+
+      el.menuButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setMenuOpen(!document.body.classList.contains("menu-open"));
+      });
+      el.eventSettingsButton.addEventListener("click", () => runMenuAction("settings"));
+      el.openButton.addEventListener("click", () => runMenuAction("open"));
+      el.menuSaveButton.addEventListener("click", () => runMenuAction("save"));
+      el.menuSaveAsButton.addEventListener("click", () => runMenuAction("save-as"));
+      el.closeSettingsButton.addEventListener("click", closeSettings);
+      el.settingsBackdrop.addEventListener("click", closeSettings);
+      document.addEventListener("click", (event) => {
+        if (!document.body.classList.contains("menu-open")) return;
+        if (event.target.closest(".menu-area")) return;
+        setMenuOpen(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        setMenuOpen(false);
+        closeSettings();
+      });
 
       el.saveButton.addEventListener("click", () => saveJson(defaultSaveName()));
       el.saveAsButton.addEventListener("click", saveAsJson);
